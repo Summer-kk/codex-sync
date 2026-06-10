@@ -38,6 +38,7 @@
 - `setup.ps1`：新机器第一次接入
 - `check-sync.ps1`：巡检本地配置与模板是否一致
 - `apply-sync.ps1`：在用户确认后，将模板内容同步到本地
+- `test.ps1`：运行仓库内的 PowerShell 回归测试
 
 ## 示例 Skill
 
@@ -88,6 +89,26 @@ git pull --ff-only
 ```powershell
 .\apply-sync.ps1 -Target skill -SkillName find-skills
 ```
+
+## 开发与验证
+
+修改脚本后，建议至少跑一遍回归测试：
+
+```powershell
+.\test.ps1
+```
+
+如果只想看巡检脚本的 JSON 输出契约，也可以直接运行：
+
+```powershell
+.\check-sync.ps1 -Format json
+```
+
+当前测试主要覆盖：
+
+- `check-sync.ps1` 推荐命令路径是否与仓库结构一致
+- `check-sync.ps1 -Format json` 在 0 个、1 个或多个结果时是否保持稳定数组语义
+- 单条建议动作和 skill 列表是否仍可被自动化稳定消费
 
 ## 安全边界
 

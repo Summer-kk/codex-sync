@@ -11,6 +11,22 @@ $repoAgents = Join-Path $syncRoot "AGENTS.md"
 $repoSkillsRoot = Join-Path $syncRoot "skills"
 $localAgents = Join-Path $CodexHome "AGENTS.md"
 $localSkillsRoot = Join-Path $CodexHome "skills"
+$applySyncCommand = ".\apply-sync.ps1"
+
+function ConvertTo-Array {
+    param(
+        [AllowNull()]
+        [object[]]$Items
+    )
+
+    if ($null -eq $Items) {
+        Write-Output -NoEnumerate @()
+        return
+    }
+
+    $filteredItems = @($Items | Where-Object { $null -ne $_ })
+    Write-Output -NoEnumerate $filteredItems
+}
 
 function Get-FileDigestOrNull {
     param(
@@ -80,11 +96,11 @@ function New-SkillStatus {
 
 $repoSkillDirs = @()
 if (Test-Path -LiteralPath $repoSkillsRoot) {
-    $repoSkillDirs = Get-ChildItem -LiteralPath $repoSkillsRoot -Directory | Sort-Object Name
+    $repoSkillDirs = ConvertTo-Array (Get-ChildItem -LiteralPath $repoSkillsRoot -Directory | Sort-Object Name)
 }
 
-$repoSkillNames = @($repoSkillDirs | ForEach-Object { $_.Name })
-$skillStatuses = @(
+$repoSkillNames = ConvertTo-Array ($repoSkillDirs | ForEach-Object { $_.Name })
+$skillStatuses = ConvertTo-Array @(
     foreach ($dir in $repoSkillDirs) {
         New-SkillStatus -Name $dir.Name -RepoPath $dir.FullName -LocalPath (Join-Path $localSkillsRoot $dir.Name)
     }
@@ -92,15 +108,17 @@ $skillStatuses = @(
 
 $extraLocalSkills = @()
 if (Test-Path -LiteralPath $localSkillsRoot) {
-    $extraLocalSkills = Get-ChildItem -LiteralPath $localSkillsRoot -Directory |
-        Where-Object { $_.Name -ne ".system" -and $_.Name -notin $repoSkillNames } |
-        Sort-Object Name |
-        ForEach-Object {
-            [pscustomobject]@{
-                name = $_.Name
-                localPath = $_.FullName
+    $extraLocalSkills = ConvertTo-Array @(
+        Get-ChildItem -LiteralPath $localSkillsRoot -Directory |
+            Where-Object { $_.Name -ne ".system" -and $_.Name -notin $repoSkillNames } |
+            Sort-Object Name |
+            ForEach-Object {
+                [pscustomobject]@{
+                    name = $_.Name
+                    localPath = $_.FullName
+                }
             }
-        }
+    )
 }
 
 $agentsRepoDigest = Get-FileDigestOrNull -Path $repoAgents
@@ -121,36 +139,38 @@ else {
 
 $actions = @()
 if ($agentsStatus -eq "legacy-hardlink") {
-    $actions += "AGENTS.md is still using the old hardlink mode; switch it to copy/sync mode with .\\template\\apply-sync.ps1 -Target agents"
+    $actions += "AGENTS.md is still using the old hardlink mode; switch it to copy/sync mode with $applySyncCommand -Target agents"
 }
 elseif ($agentsStatus -ne "same-content") {
-    $actions += "AGENTS.md can be refreshed from repo with .\\template\\apply-sync.ps1 -Target agents"
+    $actions += "AGENTS.md can be refreshed from repo with $applySyncCommand -Target agents"
 }
 
 foreach ($skill in $skillStatuses) {
     if ($skill.status -ne "linked") {
-        $actions += "Skill '$($skill.name)' can be refreshed from repo with .\\template\\apply-sync.ps1 -Target skill -SkillName $($skill.name)"
+        $actions += "Skill '$($skill.name)' can be refreshed from repo with $applySyncCommand -Target skill -SkillName $($skill.name)"
     }
 }
 
 if ($extraLocalSkills.Count -gt 0) {
-    $actions += "Local extra skills exist outside the repo; decide whether to keep them local or copy them into template\\skills"
+    $actions += "Local extra skills exist outside the repo; decide whether to keep them local or copy them into skills\\"
 }
+
+$gitStatusLines = ConvertTo-Array (git -C $syncRoot status --short 2>$null)
 
 $report = [pscustomobject]@{
     generatedAt = (Get-Date).ToString("s")
     syncRoot = $syncRoot
     codexHome = $CodexHome
     gitBranch = (git -C $syncRoot rev-parse --abbrev-ref HEAD 2>$null)
-    gitStatus = (git -C $syncRoot status --short 2>$null)
+    gitStatus = $gitStatusLines
     agents = [pscustomobject]@{
         status = $agentsStatus
         repoPath = $repoAgents
         localPath = $localAgents
     }
-    skills = $skillStatuses
-    extraLocalSkills = $extraLocalSkills
-    recommendedActions = $actions
+    skills = (ConvertTo-Array $skillStatuses)
+    extraLocalSkills = (ConvertTo-Array $extraLocalSkills)
+    recommendedActions = (ConvertTo-Array $actions)
 }
 
 if ($Format -eq "json") {
