@@ -1,55 +1,55 @@
 ---
 name: codex-sync-review
-description: Use this skill when the user wants to check whether Codex global configuration is consistent across machines, compare the local version and repository version of AGENTS.md or shared skills, judge which version is better suited to become the standard, or guide synchronization without immediately applying local changes.
+description: 当用户希望检查 Codex 全局配置在多台设备之间是否一致、比较 AGENTS.md 或共享 skills 的本地版与仓库版、判断哪一版更适合作为标准版本，或者希望在不立即修改本地配置的前提下获得同步指导时使用。
 ---
 
-# Codex Sync Review
+# Codex 配置同步巡检
 
-Use this skill when the user wants help reviewing a Codex sync template repo and the local `~/.codex` state without immediately changing local files.
+当用户希望检查模板仓库与本地 `~/.codex` 的状态，但又不想立刻修改本地文件时，使用这个 skill。
 
-## What this skill is for
+## 这个 skill 的作用
 
-This skill is the guidance layer for a Git-backed Codex configuration sync workflow.
+这个 skill 是一层“说明和判断逻辑”，用于配合基于 Git 的 Codex 配置同步流程。
 
-It should:
+它应该：
 
-- decide when to run the template's sync check
-- interpret the JSON report
-- compare local and repository versions when drift exists
-- present a structured recommendation before any local mutation
+- 判断何时运行模板中的同步检查
+- 解读 `check-sync.ps1 -Format json` 的结果
+- 在发现漂移时比较本地版和仓库版
+- 在任何本地修改发生前，先输出结构化建议
 
-It should not:
+它不应该：
 
-- reimplement the PowerShell sync logic
-- silently update `~/.codex`
-- embed platform-specific setup details that already live in the template repo
+- 重新实现 PowerShell 同步逻辑
+- 悄悄修改 `~/.codex`
+- 把已经写在模板仓库中的平台接入细节重复塞进 skill 本体
 
-## Required workflow
+## 必须遵循的流程
 
-1. Confirm the template repo path.
-2. Run the repo's `check-sync.ps1 -Format json`.
-3. Summarize:
+1. 先确认模板仓库路径。
+2. 运行仓库中的 `check-sync.ps1 -Format json`。
+3. 总结以下信息：
    - `agents.status`
-   - each `skills[].status`
+   - 每个 `skills[].status`
    - `extraLocalSkills`
    - `recommendedActions`
-4. If there is no drift, state that clearly.
-5. If there is drift, compare the repository version and the local version before recommending any sync action.
+4. 如果没有漂移，要明确说明“当前已同步”。
+5. 如果存在漂移，必须先比较仓库版和本地版，再给出同步建议。
 
-## How to judge the better standard version
+## 如何判断哪一版更适合作为标准版本
 
-When local and repository versions differ, compare them using these criteria:
+当本地版和仓库版不一致时，至少从下面几个维度比较：
 
-- whether the structure is clearer
-- whether the rules are more complete
-- whether the language is stable and suitable as a long-term standard
-- whether one version reduces ambiguity and future maintenance cost
+- 结构是否更清晰
+- 规则是否更完整
+- 语言是否更稳定，更适合作为长期规范
+- 是否能减少歧义和未来维护成本
 
-Do not default to "repository wins" or "local wins" without explaining why.
+不要默认“仓库版一定赢”或“本地版一定赢”，必须说明理由。
 
-## Output shape
+## 输出结构
 
-Use this structure:
+请按下面的结构输出：
 
 1. `检查结果`
 2. `详细差异`
@@ -57,4 +57,4 @@ Use this structure:
 4. `建议操作`
 5. `等待用户确认`
 
-Always state that local `~/.codex` will not be changed before the user confirms.
+必须明确说明：在用户确认前，不会修改本地 `~/.codex`。

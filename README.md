@@ -1,4 +1,4 @@
-# Codex Sync Open Source
+# Codex Sync
 
 一个面向 Codex 用户的开源模板仓库，用来在多台电脑之间同步全局 `AGENTS.md` 和个人 Skills，并通过脚本与自动化完成巡检、差异判断和人工确认后的同步。
 
