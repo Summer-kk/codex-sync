@@ -1,0 +1,3 @@
+*.md text eol=crlf
+*.ps1 text eol=crlf
+AGENTS.md text eol=crlf
